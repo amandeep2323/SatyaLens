@@ -16,38 +16,35 @@ class FrequencyLayer:
         spectrum_b64 = None
         
         try:
-            # Load Grayscale
+            # Load
             img = cv2.imread(image_path, 0)
             if img is None: 
                 pil_img = Image.open(image_path).convert('L')
                 img = np.array(pil_img)
 
-            # 1. GAN Periodicity (Aliasing & Upsampling detection)
-            gan_score, spectrum_img = self._detect_gan_artifacts(img)
+            # --- CHECK 1: GAN Grid Detection ---
+            # Catches rigid checkerboard patterns common in Deepfakes.
+            # Uses masking to ignore valid JPEG grids.
+            gan_score, spectrum_img = self._detect_gan_artifacts_universal(img)
             spectrum_b64 = spectrum_img
             if gan_score > 50:
                 score += gan_score
-                flags.append("Strong periodic artifacts (GAN Grid/Aliasing detected)")
+                flags.append("Strong periodic artifacts (Unknown Grid Pattern)")
 
-            # 2. Power Spectrum Slope (Physics check)
+            # --- CHECK 2: Power Spectrum Slope ---
+            # Real optics (Drone/DSLR) fall off naturally.
+            # AI often has too much high-freq energy (Slope > -1.5).
             slope_score = self._check_power_spectrum_slope(img)
             if slope_score > 60:
                 score += 30
-                flags.append("Unnatural energy decay (Violates 1/f power law)")
+                flags.append("Energy decay is unnatural (Violates 1/f law)")
 
-            # 3. [NEW] Spectral Flatness Measure (SFM)
-            # Checks if image is too "noise-like" (high flatness) or too "tone-like"
+            # --- CHECK 3: Spectral Flatness ---
+            # Catches synthetic noise injection (Diffusion models).
             sfm_score = self._calculate_spectral_flatness(img)
             if sfm_score > 50:
                 score += 20
-                flags.append("Abnormal Spectral Flatness (Likely Diffusion/Noise synthesis)")
-
-            # 4. [NEW] Multi-Scale Frequency Consistency
-            # Checks if artifacts persist when resized (a common trait of Deepfakes)
-            scale_score = self._check_multiscale_consistency(img)
-            if scale_score > 50:
-                score += 20
-                flags.append("Frequency artifacts persist across scales (Deepfake trait)")
+                flags.append("Abnormal Spectral Flatness (Synthetic Noise)")
 
         except Exception as e:
             print(f"L3 Error: {e}")
@@ -63,31 +60,54 @@ class FrequencyLayer:
             "spectrum_image": spectrum_b64
         }
 
-    def _detect_gan_artifacts(self, img):
+    def _detect_gan_artifacts_universal(self, img):
+        """
+        Universal Grid Detector.
+        Masks out center (Structure) and axes (Edges).
+        Masks out JPEG harmonics (8x8 grid).
+        Flags anything else (GANs).
+        """
         try:
+            h, w = img.shape
             f = np.fft.fft2(img)
             fshift = np.fft.fftshift(f)
-            magnitude_spectrum = 20 * np.log(np.abs(fshift) + 1e-8)
-
-            # Normalize
-            mag_norm = cv2.normalize(magnitude_spectrum, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+            magnitude = 20 * np.log(np.abs(fshift) + 1e-8)
+            mag_norm = cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
             
-            # Mask center
-            h, w = mag_norm.shape
-            cv2.circle(mag_norm, (w//2, h//2), min(h,w)//8, 0, -1)
+            cy, cx = h // 2, w // 2
+            
+            # 1. Mask DC & Axes (Real Structure)
+            cv2.circle(mag_norm, (cx, cy), 8, 0, -1)
+            cv2.line(mag_norm, (cx, 0), (cx, h), 0, 2)
+            cv2.line(mag_norm, (0, cy), (w, cy), 0, 2)
 
-            # Threshold for peaks
+            # 2. Mask JPEG Grid (8x8)
+            # This protects WhatsApp/Web images from being flagged.
+            if h > 64 and w > 64:
+                step_h = h // 8
+                step_w = w // 8
+                for i in range(1, 8):
+                    for j in range(1, 8):
+                        py = cy + (i - 4) * step_h
+                        px = cx + (j - 4) * step_w
+                        # Mask a 5x5 area around expected JPEG spots
+                        cv2.circle(mag_norm, (int(px), int(py)), 4, 0, -1)
+
+            # 3. Detect Anomalies
             _, thresh = cv2.threshold(mag_norm, 210, 255, cv2.THRESH_BINARY)
             peaks = cv2.countNonZero(thresh)
             
-            score = min(100, (peaks / 50.0) * 100)
+            # Thresholds tuned for Universal
+            score = 0
+            if peaks > 15: # Strict but fair
+                score = min(100, ((peaks - 15) / 40.0) * 100)
 
             # Visualization
             heatmap = cv2.applyColorMap(mag_norm, cv2.COLORMAP_JET)
             _, buffer = cv2.imencode('.jpg', heatmap)
             img_str = base64.b64encode(buffer).decode("utf-8")
 
-            return score, img_str
+            return int(score), img_str
         except:
             return 0, None
 
@@ -106,67 +126,33 @@ class FrequencyLayer:
             nr = np.bincount(r.ravel())
             radial_profile = tbin / (nr + 1e-8)
             
-            start, end = 10, min(len(radial_profile), min(h, w)//4)
+            start = 10
+            end = min(len(radial_profile), min(h, w)//4)
             if end <= start: return 0
             
             slope, _, _, _, _ = stats.linregress(np.log(np.arange(start, end)), np.log(radial_profile[start:end] + 1e-8))
             
-            if slope > -1.6: return 70 # Too noisy/harsh
-            if slope < -3.5: return 40 # Too blurry
+            # > -1.6 is too "flat" (White Noise / GANs)
+            # We allow steep slopes (< -3.0) because blur (Bokeh) is natural.
+            if slope > -1.6: 
+                return 70
             return 0
         except:
             return 0
 
     def _calculate_spectral_flatness(self, img):
-        """
-        Computes Geometric Mean / Arithmetic Mean of the power spectrum.
-        SFM = 1.0 (White Noise), SFM ~ 0 (Pure Sine Wave).
-        Real images have low SFM. Diffusion models often have higher SFM due to noise injection.
-        """
         try:
             f = np.fft.fft2(img)
-            magnitude = np.abs(f) ** 2 # Power spectrum
-            
-            # Avoid log(0)
+            magnitude = np.abs(f) ** 2
             ps_flat = magnitude.flatten() + 1e-10
             
-            # Geometric mean = exp(mean(log(x)))
             geo_mean = np.exp(np.mean(np.log(ps_flat)))
             ari_mean = np.mean(ps_flat)
-            
             sfm = geo_mean / ari_mean
             
-            # Real photos typically have VERY low SFM (structured). 
-            # High SFM indicates randomness/noise.
-            # Threshold varies, but sudden spikes in SFM are suspicious.
-            if sfm > 0.1: # Threshold for "Too Noisy/Diffusion-like"
+            # > 0.25 is very noisy (High ISO or Diffusion Noise)
+            if sfm > 0.25: 
                 return 60
-            return 0
-        except:
-            return 0
-
-    def _check_multiscale_consistency(self, img):
-        """
-        Checks if frequency artifacts persist when the image is downscaled.
-        Real details usually smooth out. GAN artifacts (checkerboards) often persist or alias worse.
-        """
-        try:
-            # 1. Analyze original
-            score_orig, _ = self._detect_gan_artifacts(img)
-            
-            # 2. Downscale by 50%
-            h, w = img.shape
-            resized = cv2.resize(img, (w//2, h//2), interpolation=cv2.INTER_LINEAR)
-            
-            # 3. Analyze resized
-            score_resized, _ = self._detect_gan_artifacts(resized)
-            
-            # If the image was high-scored originally, and the score STAYS high 
-            # or increases after resizing, it's likely a rigid grid artifact.
-            # Real texture details usually drop in high-freq energy when downscaled.
-            if score_orig > 30 and score_resized > 30:
-                return 60
-            
             return 0
         except:
             return 0

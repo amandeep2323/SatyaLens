@@ -11,12 +11,19 @@ class BitstreamAnalyzer:
     def analyze(self, file_path):
         score = 0
         flags = []
-
+        
         try:
-            # 1. Structural Marker Analysis (SOI, SOF2, Huffman)
-            structure_score, structure_flags = self._analyze_structure(file_path)
-            score += structure_score
-            flags.extend(structure_flags)
+            # Check file format first
+            img = Image.open(file_path)
+            if img.format not in ['JPEG', 'JPG']:
+                # If it's a PNG/WEBP, we can't run JPEG marker checks.
+                # Return a neutral result instead of 100% Fake.
+                return {
+                    "layer_name": self.layer_name,
+                    "score": 0,
+                    "verdict": "Skipped",
+                    "flags": [f"Format is {img.format} (Not JPEG) - Structure checks skipped"]
+                }
 
             # 2. Quantization Table Check
             q_score, q_flags = self._check_quantization(file_path)
