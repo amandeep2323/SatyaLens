@@ -39,90 +39,82 @@ const UploadZone = () => {
     }
   };
 
-return (
+  return (
     <div className="upload-container">
+      {/* --- UPLOAD AREA --- */}
       <div className="drop-zone">
         <input type="file" onChange={handleFileChange} accept="image/*" />
         <p>{file ? `Selected: ${file.name}` : "Drag & Drop Image or Click to Upload"}</p>
       </div>
 
       <button onClick={handleUpload} disabled={!file || loading} className="analyze-btn">
-        {loading ? "Analyzing Bitstream & Metadata..." : "Analyze Authenticity"}
+        {loading ? "Scanning Bitstream & Physics..." : "Analyze Authenticity"}
       </button>
 
+      {/* --- ERROR MESSAGE --- */}
       {error && <div className="error-box">⚠️ {error}</div>}
 
+      {/* --- RESULTS DISPLAY --- */}
       {result && (
         <div className="results-box">
-          <h2>Global Verdict: <span className={result.final_verdict === "Clean" ? "green" : "red"}>{result.final_verdict}</span> ({result.final_score}%)</h2>
+          <h2 className="verdict-header">
+            Global Verdict: <span className={result.final_verdict === "Clean" || result.final_verdict.includes("Real") ? "green" : "red"}>
+              {result.final_verdict}
+            </span> ({result.final_score}%)
+          </h2>
           
-          {/* --- LAYER 0 CARD --- */}
-          <div className="layer-card">
-            <h3>Layer 0: Bitstream Reality</h3>
-            <p><strong>Score:</strong> {result.layers.l0_bitstream.score}/100</p>
-            {result.layers.l0_bitstream.flags.length > 0 ? (
-              <ul className="flags-list">
-                {result.layers.l0_bitstream.flags.map((flag, index) => <li key={index}>🚩 {flag}</li>)}
-              </ul>
-            ) : <p className="clean-note">✅ Structure looks original.</p>}
-          </div>
+          {/* DYNAMIC LAYER GENERATION */}
+          {Object.values(result.layers).map((layer, index) => (
+            <div key={index} className="layer-card">
+              
+              {/* LEFT COLUMN: Summary (Flags & Images) */}
+              <div className="layer-left">
+                <h3>{layer.layer_name.replace(/_/g, ' ')}</h3>
+                <div className="score-badge">Score: {layer.score}/100</div>
+                
+                {/* Flags List */}
+                {layer.flags.length > 0 ? (
+                  <ul className="flags-list">
+                    {layer.flags.map((flag, i) => <li key={i}>🚩 {flag}</li>)}
+                  </ul>
+                ) : (
+                  <p className="clean-note">✅ No anomalies detected.</p>
+                )}
 
-          {/* --- LAYER 1 CARD (NEW) --- */}
-          <div className="layer-card">
-            <h3>Layer 1: Metadata & Provenance</h3>
-            <p><strong>Score:</strong> {result.layers.l1_metadata.score}/100</p>
-            {result.layers.l1_metadata.flags.length > 0 ? (
-              <ul className="flags-list">
-                {result.layers.l1_metadata.flags.map((flag, index) => <li key={index}>🚩 {flag}</li>)}
-              </ul>
-            ) : <p className="clean-note">✅ No suspicious tags found.</p>}
-          </div>
-          {/* --- LAYER 2 FORENSICS CARD --- */}
-          <div className="layer-card">
-            <h3>Layer 2: Digital Forensics</h3>
-            <p><strong>Score:</strong> {result.layers.l2_forensics.score}/100</p>
-            
-            {result.layers.l2_forensics.flags.length > 0 ? (
-              <ul className="flags-list">
-                {result.layers.l2_forensics.flags.map((flag, index) => <li key={index}>🚩 {flag}</li>)}
-              </ul>
-            ) : <p className="clean-note">✅ Noise patterns look natural.</p>}
-
-            {/* ELA IMAGE DISPLAY */}
-            {result.layers.l2_forensics.ela_image && (
-              <div style={{ marginTop: '10px' }}>
-                <p style={{ fontSize: '0.9rem', color: '#888' }}>Error Level Analysis (White = Edited/Fake):</p>
-                <img 
-                  src={`data:image/jpeg;base64,${result.layers.l2_forensics.ela_image}`} 
-                  alt="ELA Heatmap" 
-                  style={{ width: '100%', borderRadius: '8px', border: '1px solid #444' }}
-                />
+                {/* Visual Evidence (ELA / Spectrum) */}
+                {layer.ela_image && (
+                  <div className="visual-evidence">
+                    <p>ELA Heatmap (White = Error/Edit)</p>
+                    <img src={`data:image/jpeg;base64,${layer.ela_image}`} alt="ELA Analysis" />
+                  </div>
+                )}
+                {layer.spectrum_image && (
+                  <div className="visual-evidence">
+                    <p>Fourier Spectrum (Grid = GAN)</p>
+                    <img src={`data:image/jpeg;base64,${layer.spectrum_image}`} alt="Frequency Analysis" />
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          {/* --- LAYER 3 FREQUENCY CARD --- */}
-          <div className="layer-card">
-            <h3>Layer 3: Frequency Analysis</h3>
-            <p><strong>Score:</strong> {result.layers.l3_frequency.score}/100</p>
-            
-            {result.layers.l3_frequency.flags.length > 0 ? (
-              <ul className="flags-list">
-                {result.layers.l3_frequency.flags.map((flag, index) => <li key={index}>🚩 {flag}</li>)}
-              </ul>
-            ) : <p className="clean-note">✅ Frequency spectrum follows natural decay.</p>}
 
-            {/* FFT IMAGE DISPLAY */}
-            {result.layers.l3_frequency.spectrum_image && (
-              <div style={{ marginTop: '10px' }}>
-                <p style={{ fontSize: '0.9rem', color: '#888' }}>Fourier Spectrum  (Artificial peaks look like bright stars):</p>
-                <img 
-                  src={`data:image/jpeg;base64,${result.layers.l3_frequency.spectrum_image}`} 
-                  alt="FFT Spectrum" 
-                  style={{ width: '100%', borderRadius: '8px', border: '1px solid #444' }}
-                />
+              {/* RIGHT COLUMN: Deep Details (Telemetry) */}
+              <div className="layer-right">
+                <h4>📊 Technical Telemetry</h4>
+                <div className="details-grid">
+                  {layer.details && Object.entries(layer.details).length > 0 ? (
+                    Object.entries(layer.details).map(([key, value]) => (
+                      <div key={key} className="detail-item">
+                        <span className="detail-key">{key.replace(/_/g, ' ')}</span>
+                        <span className="detail-value">{value}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="no-data">No metrics available</p>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
+
+            </div>
+          ))}
         </div>
       )}
     </div>
