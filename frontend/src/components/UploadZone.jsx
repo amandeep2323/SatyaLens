@@ -100,6 +100,29 @@ return (
               </div>
             )}
           </div>
+          {/* --- LAYER 3 FREQUENCY CARD --- */}
+          <div className="layer-card">
+            <h3>Layer 3: Frequency Analysis</h3>
+            <p><strong>Score:</strong> {result.layers.l3_frequency.score}/100</p>
+            
+            {result.layers.l3_frequency.flags.length > 0 ? (
+              <ul className="flags-list">
+                {result.layers.l3_frequency.flags.map((flag, index) => <li key={index}>🚩 {flag}</li>)}
+              </ul>
+            ) : <p className="clean-note">✅ Frequency spectrum follows natural decay.</p>}
+
+            {/* FFT IMAGE DISPLAY */}
+            {result.layers.l3_frequency.spectrum_image && (
+              <div style={{ marginTop: '10px' }}>
+                <p style={{ fontSize: '0.9rem', color: '#888' }}>Fourier Spectrum  (Artificial peaks look like bright stars):</p>
+                <img 
+                  src={`data:image/jpeg;base64,${result.layers.l3_frequency.spectrum_image}`} 
+                  alt="FFT Spectrum" 
+                  style={{ width: '100%', borderRadius: '8px', border: '1px solid #444' }}
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
