@@ -1,0 +1,122 @@
+
+Layer Stack
+
+Layer 0 — File & Bitstream Reality Check
+Checks:
+* JPEG marker order validity
+* Quantization table entropy
+* Huffman table reuse
+* Chunk alignment anomalies
+* HEIC/AVIF encoder fingerprinting
+
+
+Layer 1 — Metadata + Provenance
+Checks:
+* EXIF / XMP / IPTC
+* Thumbnail vs image mismatch
+* Software pipeline fingerprinting
+* Prompt leakage
+* Diffusion parameters
+* Partial C2PA parsing (even without full trust)
+
+ Layer 2 — Classical Forensics 
+Include:
+* ELA (multi-quality, not one)
+* Noise residual maps
+* PRNU-like behavior (even without camera reference)
+* CFA interpolation inconsistency
+* Patch similarity (priorpatch ideas)
+* Block boundary entropy
+
+ Layer 3 — Frequency Domain Abuse Detection
+Add:
+* Radial power spectrum slope fitting
+* GAN upsampling periodicity detection
+* Aliasing fingerprints
+* Spectral flatness anomalies
+* Multi-scale frequency comparison
+
+Layer 4 — Semantic & Physical Inconsistencies
+Checks:
+
+* Face geometry violations
+* Eye highlight symmetry
+* Shadow direction vectors
+* Perspective mismatch
+* Anatomical constraints
+* Object affordance errors
+
+Layer 5 — Deep Learning
+Use:
+* CNN (EfficientNet)
+* Transformer (ViT / SigLIP-like)
+* Possibly contrastive embeddings
+
+Layer 6 — Cross-Layer Contradiction Engine
+
+This is where SatyaLens becomes unique.
+
+Example:
+
+* ML says “Real”
+* Bitstream says “AI export”
+* Frequency says “Synthetic”
+
+That contradiction is **information**, not noise.
+
+Logic:
+
+* Bayesian reasoning
+* Weighted trust per layer
+* Conflict amplification
+* Confidence decay on disagreement
+
+Layer 7 — Memory, Learning, Drift
+Store:
+* Hashes
+* Feature vectors
+* Past verdicts
+* User corrections (optional)
+
+----
+
+SatyaLens should not say just:
+
+“AI Generated / Real”
+
+It should say:
+
+* Likely AI-Generated
+* Likely Edited
+* Synthetic-Assisted
+* Physically Implausible
+* Authenticity Uncertain
+* Consistent with Camera Capture
+
+
+SatyaLens/
+├── core/                    # Python forensic engine
+│   ├── l0_bitstream.py
+│   ├── l1_metadata.py
+│   ├── l2_forensics.py
+│   ├── l3_frequency.py
+│   ├── l4_semantic.py
+│   ├── l5_ml.py
+│   ├── l6_reasoning.py
+│   └── l7_memory.py
+│
+├── api/
+│   └── main.py              # FastAPI server
+│
+├── frontend/                # React + Vite
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── services/        # API calls
+│   │   └── App.tsx
+│   └── vite.config.ts
+│
+├── models/
+├── storage/
+├── tools/
+└── main.py                  # Orchestrator (CLI / Electron hook)
