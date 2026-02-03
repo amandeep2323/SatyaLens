@@ -6,10 +6,10 @@ import {
   ArrowRight, CheckCircle2, Lock, Mail, LogIn, Loader2
 } from 'lucide-react';
 import UploadZone from './components/UploadZone';
-import './index.css';
+import './index.css'; // Ensure this contains your Sero CSS & Tailwind directives
 import './App.css';
 
-// --- STYLED COMPONENTS ---
+// --- COMPONENTS ---
 
 const LoginModal = ({ isOpen, onClose, onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -18,6 +18,7 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
   const [error, setError] = useState('');
 
   const handleGoogleLogin = () => {
+    // Backend endpoint for Google OAuth
     window.location.href = "http://localhost:5000/auth/google";
   };
 
@@ -53,6 +54,7 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      {/* Backdrop */}
       <motion.div 
         initial={{ opacity: 0 }} 
         animate={{ opacity: 1 }} 
@@ -61,13 +63,14 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
         className="absolute inset-0 bg-black/60 backdrop-blur-md"
       />
       
+      {/* Modal Card */}
       <motion.div 
         initial={{ scale: 0.95, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
         className="relative w-full max-w-md bg-[#0a0a0a] border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden glass-card"
       >
-        {/* Modal Header */}
+        {/* Header with Orb */}
         <div className="p-8 pb-6 text-center relative overflow-hidden">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 bg-orange-500/20 rounded-full blur-[50px] pointer-events-none" />
           
@@ -84,7 +87,7 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
           </div>
         </div>
 
-        {/* Auth Body */}
+        {/* Body */}
         <div className="p-8 pt-0 space-y-6">
           <button 
             onClick={handleGoogleLogin}
@@ -191,7 +194,7 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
   );
 };
 
-// --- MAIN APP ---
+// --- MAIN APP COMPONENT ---
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -201,6 +204,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
 
+  // Initial Auth Check
   useEffect(() => {
     fetch('http://localhost:5000/auth/me')
       .then(res => res.json())
@@ -208,10 +212,12 @@ function App() {
       .catch(err => console.error("Auth check failed", err));
   }, []);
 
+  // Theme Management
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode);
   }, [isDarkMode]);
 
+  // Scroll Listener
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
@@ -225,62 +231,83 @@ function App() {
   };
 
   return (
-    <div className={`min-h-screen font-sans selection:bg-orange-500/30 selection:text-orange-200 transition-colors duration-300 ${isDarkMode ? 'dark bg-[#0a0a0a]' : 'bg-gray-50'}`}>
+    <div className="min-h-screen font-sans selection:bg-orange-500/30 selection:text-orange-200 bg-background text-foreground transition-colors duration-300">
       
       <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} onLogin={setUser} />
 
       {/* Navigation */}
       <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 border-b ${
-          scrolled ? 'bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border-gray-200 dark:border-white/10' : 'bg-transparent border-transparent'
+          scrolled 
+            ? 'bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border-gray-200 dark:border-white/10' 
+            : 'bg-transparent border-transparent'
         }`}>
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <motion.a href="/" className="flex items-center gap-2 group" onClick={(e) => {
+          <motion.a 
+            href="/" 
+            className="flex items-center gap-2 group" 
+            onClick={(e) => {
               e.preventDefault(); setShowAnalyze(false); window.scrollTo({ top: 0, behavior: 'smooth' });
             }}>
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-500 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
               <Eye className="w-6 h-6" />
             </div>
-            <span className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white group-hover:opacity-80 transition-opacity">
+            <span className="text-2xl font-bold tracking-tight text-foreground group-hover:opacity-80 transition-opacity">
               SatyaLens
             </span>
           </motion.a>
 
+          {/* Desktop Links */}
           <div className="hidden md:flex items-center gap-8">
             {['Features', 'Technology', 'About'].map((item) => (
-              <a key={item} href={`#${item.toLowerCase()}`} className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-orange-500 dark:hover:text-orange-400 transition-colors">
+              <a key={item} href={`#${item.toLowerCase()}`} className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 {item}
               </a>
             ))}
           </div>
 
+          {/* Action Buttons */}
           <div className="hidden md:flex items-center gap-4">
-            <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 transition-colors">
+            <button 
+              onClick={() => setIsDarkMode(!isDarkMode)} 
+              className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 text-muted-foreground transition-colors"
+            >
               {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
 
             {user ? (
               <div className="flex items-center gap-4">
-                <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Hi, {user.name}</span>
-                <button onClick={handleLogout} className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-900 dark:text-white font-medium text-sm hover:bg-white/10 transition-all">
+                <span className="text-sm font-medium text-muted-foreground">Hi, {user.name}</span>
+                <button onClick={handleLogout} className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-foreground font-medium text-sm hover:bg-white/10 transition-all">
                   Sign Out
                 </button>
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setShowAnalyze(true)} className="px-5 py-2.5 rounded-xl bg-white text-gray-900 font-bold text-sm shadow-lg shadow-white/10 hover:shadow-white/20 transition-all">
+                <motion.button 
+                  whileHover={{ scale: 1.02 }} 
+                  whileTap={{ scale: 0.98 }} 
+                  onClick={() => setShowAnalyze(true)} 
+                  className="px-5 py-2.5 rounded-xl bg-white text-gray-900 font-bold text-sm shadow-lg shadow-white/10 hover:shadow-white/20 transition-all"
+                >
                   Dashboard
                 </motion.button>
               </div>
             ) : (
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setShowLogin(true)} className="px-6 py-2.5 rounded-xl bg-white dark:bg-white text-gray-900 font-bold text-sm shadow-lg shadow-white/10 hover:shadow-white/20 transition-all">
+              <motion.button 
+                whileHover={{ scale: 1.02 }} 
+                whileTap={{ scale: 0.98 }} 
+                onClick={() => setShowLogin(true)} 
+                className="px-6 py-2.5 rounded-xl bg-white text-gray-900 font-bold text-sm shadow-lg shadow-white/10 hover:shadow-white/20 transition-all"
+              >
                 Sign In
               </motion.button>
             )}
           </div>
 
-          <button className="md:hidden p-2 text-gray-600 dark:text-gray-300" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+          <button className="md:hidden p-2 text-muted-foreground" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
             {isMobileMenuOpen ? <X /> : <Menu />}
           </button>
         </div>
       </nav>
 
+      {/* Main Content Area */}
       <main className="pt-20">
         <AnimatePresence mode="wait">
           {showAnalyze && user ? (
@@ -296,10 +323,13 @@ function App() {
   );
 }
 
+// --- SUB-SECTIONS ---
+
 function LandingPage({ onAnalyze }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
       <section className="relative min-h-[90vh] flex items-center overflow-hidden">
+        {/* Ambient Backgrounds */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-orange-500/20 blur-[120px] rounded-full opacity-50 dark:opacity-30 mix-blend-screen" />
           <div className="absolute bottom-0 right-0 w-[800px] h-[600px] bg-pink-500/20 blur-[120px] rounded-full opacity-30 mix-blend-screen" />
@@ -311,12 +341,12 @@ function LandingPage({ onAnalyze }) {
               <Sparkles className="w-3 h-3" /> v2.0 Now Available
             </motion.div>
 
-            <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-5xl lg:text-7xl font-bold text-gray-900 dark:text-white tracking-tight leading-[1.1] text-punched">
+            <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-5xl lg:text-7xl font-bold text-foreground tracking-tight leading-[1.1] text-punched">
               Verify Reality in <br />
               <span className="gradient-text">The AI Age</span>
             </motion.h1>
 
-            <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-xl text-gray-600 dark:text-gray-400 max-w-lg mx-auto lg:mx-0 leading-relaxed">
+            <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-xl text-muted-foreground max-w-lg mx-auto lg:mx-0 leading-relaxed">
               The advanced forensic tool for detecting deepfakes and AI-generated content with 99.8% precision.
             </motion.p>
 
@@ -324,7 +354,7 @@ function LandingPage({ onAnalyze }) {
               <button onClick={onAnalyze} className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2">
                 <Upload className="w-5 h-5" /> Start Analysis
               </button>
-              <a href="#features" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white font-semibold hover:bg-gray-50 dark:hover:bg-white/10 transition-all flex items-center justify-center gap-2 group">
+              <a href="#features" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-foreground font-semibold hover:bg-gray-50 dark:hover:bg-white/10 transition-all flex items-center justify-center gap-2 group">
                 Learn More <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </a>
             </motion.div>
@@ -382,16 +412,16 @@ function FeaturesSection() {
     { icon: Shield, title: 'Forensic Report', desc: 'Generates detailed, court-admissible PDF reports.' }
   ];
   return (
-    <section id="features" className="py-32 bg-gray-50 dark:bg-[#0a0a0a]">
+    <section id="features" className="py-32 bg-secondary/50">
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
           {features.map((f, i) => (
-            <div key={i} className="p-8 rounded-[2rem] bg-white dark:bg-[#0f0f0f] border border-gray-200 dark:border-white/5 hover:border-orange-500/50 transition-all duration-300 hover:-translate-y-1 group">
+            <div key={i} className="p-8 rounded-[2rem] bg-card border border-border hover:border-orange-500/50 transition-all duration-300 hover:-translate-y-1 group">
               <div className="w-14 h-14 rounded-2xl bg-orange-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                 <f.icon className="w-7 h-7 text-orange-500" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{f.title}</h3>
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm">{f.desc}</p>
+              <h3 className="text-xl font-bold text-foreground mb-3">{f.title}</h3>
+              <p className="text-muted-foreground leading-relaxed text-sm">{f.desc}</p>
             </div>
           ))}
         </div>
@@ -402,15 +432,39 @@ function FeaturesSection() {
 
 function TechnologySection() {
     return (
-        <section id="technology" className="py-32 bg-white dark:bg-[#0a0a0a]">
+        <section id="technology" className="py-32 bg-background">
             <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
                 <div>
-                    <h2 className="text-3xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+                    <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-6">
                         The <span className="gradient-text">7-Layer</span> Engine
                     </h2>
-                    <p className="text-lg text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
-                        Our proprietary engine peels back digital layers to reveal inconsistencies.
+                    <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+                        Our proprietary engine peels back digital layers to reveal inconsistencies. 
+                        While AI generators are getting better at fooling human eyes, they cannot hide the mathematical fingerprints they leave behind.
                     </p>
+                </div>
+                <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-pink-500 blur-[100px] opacity-20" />
+                    <div className="relative rounded-3xl bg-[#0f0f0f] border border-white/10 p-8 shadow-2xl glass-card">
+                        <div className="space-y-8">
+                            {[98, 85, 92, 99].map((val, i) => (
+                                <div key={i}>
+                                    <div className="flex justify-between text-sm text-gray-400 mb-2 font-medium">
+                                        <span>Layer {i + 1} Analysis</span>
+                                        <span className="text-white">{val}%</span>
+                                    </div>
+                                    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                                        <motion.div 
+                                            initial={{ width: 0 }}
+                                            whileInView={{ width: `${val}%` }}
+                                            transition={{ duration: 1, delay: i * 0.1 }}
+                                            className="h-full bg-gradient-to-r from-orange-500 to-pink-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]" 
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -419,14 +473,14 @@ function TechnologySection() {
 
 function AnalyzeSection({ onBack }) {
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] pb-20">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="min-h-screen bg-background pb-20">
       <div className="max-w-7xl mx-auto px-6 py-12">
-        <button onClick={onBack} className="mb-8 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-orange-500 transition-colors flex items-center gap-2">
+        <button onClick={onBack} className="mb-8 text-sm font-medium text-muted-foreground hover:text-orange-500 transition-colors flex items-center gap-2">
           <ArrowRight className="w-4 h-4 rotate-180" /> Back to Home
         </button>
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Forensic Lab</h1>
-          <p className="text-gray-600 dark:text-gray-400">Upload media to begin the 7-layer extraction process</p>
+          <h1 className="text-4xl font-bold text-foreground mb-4">Forensic Lab</h1>
+          <p className="text-muted-foreground">Upload media to begin the 7-layer extraction process</p>
         </div>
         <UploadZone />
       </div>
@@ -436,12 +490,15 @@ function AnalyzeSection({ onBack }) {
 
 function Footer() {
   return (
-    <footer className="py-12 bg-white dark:bg-[#0a0a0a] border-t border-gray-200 dark:border-white/5">
+    <footer className="py-12 bg-background border-t border-border">
       <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
         <div className="flex items-center gap-3">
-            <span className="text-xl font-bold text-gray-900 dark:text-white">SatyaLens</span>
+            <span className="text-xl font-bold text-foreground">SatyaLens</span>
         </div>
-        <p className="text-sm text-gray-500">© 2025 SatyaLens. All rights reserved.</p>
+        <div className="flex gap-6">
+             {/* Social icons can go here */}
+        </div>
+        <p className="text-sm text-muted-foreground">© 2025 SatyaLens. All rights reserved.</p>
       </div>
     </footer>
   );
