@@ -1,6 +1,4 @@
-Here is a professional, complete `README.md` for your project **SatyaLens**.
 
-```markdown
 # 👁️ SatyaLens - AI Forensic & Deepfake Detection
 
 ![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
