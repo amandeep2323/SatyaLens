@@ -6,20 +6,36 @@ import {
   ArrowRight, CheckCircle2, Lock, Mail, LogIn, Loader2
 } from 'lucide-react';
 import UploadZone from './components/UploadZone';
-import './index.css'; // Ensure this contains your Sero CSS & Tailwind directives
-import './App.css';
+// ❌ Remove this line: import './index.css'; 
+// (It is now in main.jsx to prevent duplicates)
 
-// --- COMPONENTS ---
+// --- FIREBASE IMPORTS ---
+import { auth, googleProvider } from './firebase'; // This will now work
+import { 
+  signInWithPopup, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  updateProfile
+} from 'firebase/auth';
 
-const LoginModal = ({ isOpen, onClose, onLogin }) => {
+// ... (Rest of your App.jsx code remains exactly the same) ...
+
+const LoginModal = ({ isOpen, onClose }) => {
+  // ... existing code ...
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '', name: '' });
   const [error, setError] = useState('');
 
-  const handleGoogleLogin = () => {
-    // Backend endpoint for Google OAuth
-    window.location.href = "http://localhost:5000/auth/google";
+  const handleGoogleLogin = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -27,24 +43,21 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
     setIsLoading(true);
     setError('');
     
-    const endpoint = isLogin ? '/auth/login' : '/auth/register';
-    const url = `http://localhost:5000${endpoint}`;
-    
     try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      
-      const data = await res.json();
-      
-      if (!res.ok) throw new Error(data.error || 'Authentication failed');
-      
-      onLogin(data.user);
+      if (isLogin) {
+        await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      } else {
+        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        if (formData.name) {
+          await updateProfile(userCredential.user, { displayName: formData.name });
+        }
+      }
       onClose();
     } catch (err) {
-      setError(err.message);
+      if (err.code === 'auth/invalid-credential') setError('Invalid email or password.');
+      else if (err.code === 'auth/email-already-in-use') setError('Email already in use.');
+      else if (err.code === 'auth/weak-password') setError('Password should be at least 6 characters.');
+      else setError(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -54,7 +67,6 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Backdrop */}
       <motion.div 
         initial={{ opacity: 0 }} 
         animate={{ opacity: 1 }} 
@@ -63,17 +75,14 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
         className="absolute inset-0 bg-black/60 backdrop-blur-md"
       />
       
-      {/* Modal Card */}
       <motion.div 
         initial={{ scale: 0.95, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
         className="relative w-full max-w-md bg-[#0a0a0a] border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden glass-card"
       >
-        {/* Header with Orb */}
         <div className="p-8 pb-6 text-center relative overflow-hidden">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 bg-orange-500/20 rounded-full blur-[50px] pointer-events-none" />
-          
           <div className="relative z-10">
             <div className="w-14 h-14 mx-auto bg-gradient-to-tr from-orange-500 to-pink-500 rounded-2xl flex items-center justify-center text-white mb-4 shadow-lg shadow-orange-500/20">
               <LogIn className="w-7 h-7" />
@@ -87,12 +96,12 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
           </div>
         </div>
 
-        {/* Body */}
         <div className="p-8 pt-0 space-y-6">
           <button 
             onClick={handleGoogleLogin}
             className="w-full h-12 rounded-xl bg-white text-gray-900 font-semibold flex items-center justify-center gap-3 hover:bg-gray-100 transition-colors shadow-lg shadow-white/5"
           >
+            {/* Google Icon SVG */}
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -194,8 +203,6 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
   );
 };
 
-// --- MAIN APP COMPONENT ---
-
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -204,20 +211,26 @@ function App() {
   const [user, setUser] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
 
-  // Initial Auth Check
+  // --- FIREBASE AUTH LISTENER ---
   useEffect(() => {
-    fetch('http://localhost:5000/auth/me')
-      .then(res => res.json())
-      .then(data => { if (data.authenticated) setUser(data.user); })
-      .catch(err => console.error("Auth check failed", err));
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setUser({
+          name: currentUser.displayName || currentUser.email.split('@')[0],
+          email: currentUser.email,
+          photo: currentUser.photoURL
+        });
+      } else {
+        setUser(null);
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
-  // Theme Management
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode);
   }, [isDarkMode]);
 
-  // Scroll Listener
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
@@ -225,15 +238,14 @@ function App() {
   }, []);
 
   const handleLogout = async () => {
-    await fetch('http://localhost:5000/auth/logout', { method: 'POST' });
-    setUser(null);
+    await signOut(auth);
     setShowAnalyze(false);
   };
 
   return (
     <div className="min-h-screen font-sans selection:bg-orange-500/30 selection:text-orange-200 bg-background text-foreground transition-colors duration-300">
       
-      <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} onLogin={setUser} />
+      <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
 
       {/* Navigation */}
       <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 border-b ${
@@ -322,8 +334,6 @@ function App() {
     </div>
   );
 }
-
-// --- SUB-SECTIONS ---
 
 function LandingPage({ onAnalyze }) {
   return (
