@@ -1,70 +1,178 @@
-# Caffeine Craze ☕
+Here is a professional, complete `README.md` for your project **SatyaLens**.
 
-**Caffeine Craze** is a complete web application for a coffee shop. It allows customers to browse a menu, manage a shopping cart, register/login to their accounts, place orders, and view their order history. The application is built with vanilla JavaScript, HTML, CSS, and Bootstrap, and is powered by **Firebase** for backend services (Authentication and Firestore Database).
+```markdown
+# 👁️ SatyaLens - AI Forensic & Deepfake Detection
+
+![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![React](https://img.shields.io/badge/frontend-React%20%7C%20Vite%20%7C%20Tailwind-blue)
+![Python](https://img.shields.io/badge/backend-Flask%20%7C%20TensorFlow%20%7C%20OpenCV-yellow)
+
+**SatyaLens** is an advanced, multi-layered forensic tool designed to verify digital media authenticity in the AI age. Unlike standard detectors that look at surface pixels, SatyaLens employs a proprietary **7-Layer Engine** to analyze bitstreams, metadata consistency, frequency artifacts, and semantic logic to detect deepfakes with high precision.
+
+---
 
 ## 🚀 Features
 
-* **Home Page**: A welcoming landing page featuring the cafe's story, best sellers, and contact information.
-* **Interactive Menu**: Browse a variety of coffee drinks and snacks with images, descriptions, prices, and ratings.
-* **Shopping Cart**:
-    * Add items to cart with a single click.
-    * Adjust quantities or remove items.
-    * Real-time total calculation.
-    * Cart data persists using `localStorage`.
-* **User Authentication**:
-    * Secure Login and Registration using **Firebase Auth**.
-    * Support for Email/Password and Google Sign-In.
-    * Password validation and error handling.
-* **Checkout System**:
-    * Delivery address form (Home/Office/Other).
-    * Order summary review before confirmation.
-    * Orders are saved directly to the database.
-* **User Profile**:
-    * View personal account details.
-    * **Order History**: Track past orders with status, items, and total cost, fetched dynamically from Firestore.
+### The 7-Layer Detection Engine
+1.  **Bitstream Analysis**: Scans file structure for encoding anomalies typical of AI generation.
+2.  **Metadata Consistency**: Cross-references EXIF/IPTC data with image content.
+3.  **ELA Forensics**: Error Level Analysis to detect manipulation in compression levels.
+4.  **Frequency Spectrum**: FFT (Fast Fourier Transform) analysis to find GAN/Diffusion upscaling artifacts.
+5.  **Semantic Logic**: High-level analysis of scene lighting, shadows, and physics.
+6.  **Human Presence**: Facial dynamics, blinking patterns, and lip-sync analysis.
+7.  **Provenance Check**: Reverse search and digital signature verification.
+
+### UI/UX
+* **Modern "Sero" Aesthetic**: Dark mode-first, glassmorphism design.
+* **Real-time Analysis**: WebSocket/Streaming updates for analysis progress.
+* **Detailed Reports**: Generates comprehensive PDF forensic reports.
+* **Secure Auth**: Integrated Google & Email authentication via Firebase.
+
+---
 
 ## 🛠️ Tech Stack
 
-* **Frontend**: HTML5, CSS3, JavaScript (ES6+ modules).
-* **Styling**: Bootstrap 5.3.3, Custom CSS, Google Fonts ("Dancing Script", "Edu AU VIC WA NT Hand").
-* **Backend / BaaS**:
-    * **Firebase Authentication**: User management.
-    * **Cloud Firestore**: NoSQL database for storing user profiles and orders.
-    * **Firebase Analytics**: Site usage tracking.
+### Frontend
+* **Framework**: React 19 + Vite
+* **Styling**: Tailwind CSS v4 + PostCSS
+* **Animations**: Framer Motion
+* **Icons**: Lucide React
+* **Auth**: Firebase SDK
+
+### Backend
+* **Core**: Python 3.10+
+* **API**: Flask
+* **Computer Vision**: OpenCV, MediaPipe
+* **AI/ML**: TensorFlow, Scikit-learn, PyTorch
+* **Audio**: Librosa
+
+---
 
 ## 📂 Project Structure
 
-* **`index.html`**: The main landing page.
-* **`product.html`**: The menu page where users can browse and add items to the cart.
-* **`spa.html`**: The authentication hub handling Login and Register views.
-* **`proceed_button.html`**: The Cart and Checkout page.
-* **`profile.html`**: The user dashboard displaying account info and order history.
-* **`js/`**:
-    * `spa.js`: Handles authentication logic and UI toggling.
-    * `cart.js`: Manages cart state (add/remove/update) and localStorage.
-    * `firestore.js`: Handles database operations (saving orders, fetching history).
+```text
+SatyaLens/
+├── backend/               # Python Flask API
+│   ├── engine/            # The 7-Layer analysis modules
+│   ├── models/            # Pre-trained ML models (.h5, .pkl)
+│   ├── app.py             # API Entry point
+│   └── requirements.txt   # Python dependencies
+│
+├── frontend/              # React Web Application
+│   ├── src/
+│   │   ├── components/    # UI Components (UploadZone, Charts)
+│   │   ├── styles/        # Global CSS & Tailwind setup
+│   │   └── App.jsx        # Main application logic
+│   ├── index.html
+│   └── vite.config.js
+│
+├── electron/              # Electron wrapper (optional desktop app)
+└── start.bat              # One-click startup script
 
-## ⚙️ Installation & Setup
+```
 
-1.  **Clone the repository:**
-    ```bash
-    git clone [https://github.com/your-username/caffeine-craze.git](https://github.com/your-username/caffeine-craze.git)
-    cd caffeine-craze
-    ```
+---
 
-2.  **Serve the application:**
-    Since the project uses JavaScript Modules, you must use a local server.
+## ⚡ Getting Started
 
-    * **VS Code Users:** Install the "Live Server" extension, right-click `index.html`, and select "Open with Live Server".
-    * **Node.js Users:**
-        ```bash
-        npx serve .
-        ```
+### Prerequisites
 
-3.  **Firebase Configuration:**
-    The project is pre-configured with Firebase credentials. Ensure you have an active internet connection to communicate with the Firebase servers.
+* **Node.js** (v18 or higher)
+* **Python** (v3.10 or higher)
+* **Git**
+
+### 1. Clone the Repository
+
+```bash
+git clone [https://github.com/yourusername/satyalens.git](https://github.com/yourusername/satyalens.git)
+cd satyalens
+
+```
+
+### 2. Backend Setup
+
+Navigate to the backend folder and install Python dependencies.
+
+```bash
+cd backend
+python -m venv venv
+# Windows
+venv\Scripts\activate
+# Mac/Linux
+source venv/bin/activate
+
+pip install -r requirements.txt
+
+```
+
+### 3. Frontend Setup
+
+Navigate to the frontend folder and install Node dependencies.
+
+```bash
+cd ../frontend
+npm install
+
+```
+
+### 4. Configuration
+
+1. Create a `frontend/src/firebase.js` file with your Firebase credentials (see `firebase.example.js`).
+2. Ensure your backend models are placed in `backend/models/`.
+
+### 5. Running the App
+
+You can use the provided batch scripts for easy startup on Windows:
+
+* **Run Everything:** Double click `start.bat`
+* **Frontend Only:** `start_frontend.bat`
+* **Backend Only:** `start_backend.bat`
+
+Or manually:
+
+**Terminal 1 (Backend):**
+
+```bash
+cd backend
+python app.py
+# Server runs on [http://127.0.0.1:5000](http://127.0.0.1:5000) (or 4242)
+
+```
+
+**Terminal 2 (Frontend):**
+
+```bash
+cd frontend
+npm run dev
+# Client runs on http://localhost:5173
+
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the project.
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`).
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4. Push to the branch (`git push origin feature/AmazingFeature`).
+5. Open a Pull Request.
+
+---
 
 ## 📄 License
 
-This project is available for educational purposes.
+Distributed under the MIT License. See `LICENSE` for more information.
 
+---
+
+<p align="center">
+Built with ❤️ by the SatyaLens Team
+</p>
+
+```
+
+```
