@@ -1,0 +1,36 @@
+/* Performance Optimizations */
+
+/* GPU acceleration for animated elements */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Optimize glass card rendering */
+.glass-card {
+  will-change: transform, opacity;
+  content-visibility: auto;
+}
+
+/* Smooth gradients */
+.gradient-bg {
+  will-change: background-position;
+  transform: translateZ(0);
+}
+
+/* Reduce layout thrashing on hero text */
+.hero-text {
+  will-change: transform, opacity;
+  text-rendering: optimizeLegibility;
+}
+
+/* Disable expensive effects on reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

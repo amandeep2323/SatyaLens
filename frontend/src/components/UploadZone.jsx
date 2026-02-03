@@ -2,7 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload, FileImage, Loader2, CheckCircle2, AlertTriangle, XCircle, 
-  ChevronDown, ChevronUp, Activity, Layers, Eye, Shield, Brain, Zap, Database
+  ChevronDown, ChevronUp, Activity, Layers, Eye, Shield, Brain, Zap, Database,
+  FileVideo
 } from 'lucide-react';
 
 const UploadZone = () => {
@@ -45,7 +46,8 @@ const UploadZone = () => {
     try {
       const response = await fetch('http://127.0.0.1:4242/analyze', { method: 'POST', body: formData });
       if (!response.ok) throw new Error('Analysis failed.');
-      setResult(await response.json());
+      const data = await response.json();
+      setResult(data);
     } catch (err) { setError(err.message); } 
     finally { setLoading(false); }
   };
@@ -54,100 +56,130 @@ const UploadZone = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      {/* Upload Area */}
+      {/* Sero-Style Upload Area */}
       <motion.div 
         layout
-        className={`relative rounded-3xl border-2 border-dashed transition-all duration-300 overflow-hidden ${
-            dragActive ? 'border-orange-500 bg-orange-500/5' : 'border-gray-200 dark:border-white/10 hover:border-orange-500/50'
-        } ${preview ? 'p-8' : 'p-16'}`}
+        className={`relative rounded-[2.5rem] overflow-hidden transition-all duration-300 ${
+            dragActive ? 'scale-[1.02] shadow-2xl' : 'shadow-xl'
+        } ${preview && !result ? 'bg-[#0a0a0a] border border-white/10' : 'bg-transparent'}`}
         onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
       >
-        <input type="file" onChange={(e) => e.target.files[0] && handleFile(e.target.files[0])} accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" />
-        
         {!preview ? (
-          <div className="text-center pointer-events-none">
-            <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-500">
-              <Upload className="w-8 h-8" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Drag & Drop Image</h3>
-            <p className="text-gray-500 dark:text-gray-400">or click to browse files</p>
+          /* IDLE STATE: Sero Gradient Orb */
+          <div className={`relative border-2 border-dashed rounded-[2.5rem] p-12 transition-all ${
+             dragActive ? 'border-orange-500 bg-orange-500/5' : 'border-white/10 bg-[#0f0f0f]/50 hover:border-orange-500/30'
+          }`}>
+             <input type="file" onChange={(e) => e.target.files[0] && handleFile(e.target.files[0])} accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50" />
+             
+             <div className="flex flex-col items-center gap-6 pointer-events-none">
+                <motion.div
+                  animate={dragActive ? { scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] } : {}}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="relative"
+                >
+                   <div className="absolute inset-0 bg-gradient-to-br from-orange-500/30 via-pink-500/20 to-purple-500/30 rounded-full blur-2xl" />
+                   <div className="relative bg-gradient-to-br from-orange-500 to-pink-500 rounded-full p-6 shadow-2xl">
+                      <Upload className="w-10 h-10 text-white" />
+                   </div>
+                </motion.div>
+                
+                <div className="text-center space-y-2">
+                   <h3 className="text-xl font-bold text-white text-punched">
+                      {dragActive ? 'Drop to Analyze' : 'Drop your image here'}
+                   </h3>
+                   <p className="text-white/60 text-sm">Supports JPEG, PNG, WebP • Max 50MB</p>
+                </div>
+             </div>
           </div>
         ) : (
-          <div className="flex flex-col md:flex-row gap-8 items-center relative z-30">
-            <div className="w-full md:w-1/2 aspect-video bg-gray-900 rounded-xl overflow-hidden shadow-2xl">
-                <img src={preview} alt="Preview" className="w-full h-full object-contain" />
-            </div>
-            <div className="w-full md:w-1/2 space-y-4">
-                <div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">{file.name}</h3>
-                    <p className="text-sm text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+          /* PREVIEW STATE */
+          <div className="p-8">
+             <div className="flex flex-col md:flex-row gap-8 items-center">
+                <div className="w-full md:w-1/2 aspect-video bg-black/50 rounded-2xl overflow-hidden border border-white/10 relative group">
+                   <img src={preview} alt="Preview" className="w-full h-full object-contain" />
+                   <button onClick={() => {setPreview(null); setFile(null);}} className="absolute top-2 right-2 p-2 bg-black/50 hover:bg-red-500/50 rounded-full text-white transition-colors opacity-0 group-hover:opacity-100">
+                      <XCircle className="w-5 h-5" />
+                   </button>
                 </div>
                 
-                {!result && (
-                    <button
-                        onClick={handleUpload}
-                        disabled={loading}
-                        className="w-full py-3 rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold hover:shadow-lg hover:shadow-orange-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
-                        {loading ? 'Analyzing...' : 'Run Forensic Analysis'}
-                    </button>
-                )}
-            </div>
+                <div className="w-full md:w-1/2 space-y-6">
+                   <div>
+                      <h3 className="text-2xl font-bold text-white truncate">{file.name}</h3>
+                      <p className="text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                   </div>
+                   
+                   {!result && (
+                      <button
+                          onClick={handleUpload}
+                          disabled={loading}
+                          className="w-full py-4 rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold text-lg shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                      >
+                          {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Zap className="w-6 h-6" />}
+                          {loading ? 'Analyzing Layers...' : 'Run Forensic Analysis'}
+                      </button>
+                   )}
+                </div>
+             </div>
           </div>
         )}
       </motion.div>
 
-      {/* Results */}
+      {/* RESULTS DISPLAY */}
       <AnimatePresence>
         {result && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                 {/* Main Verdict Card */}
-                <div className={`p-8 rounded-2xl border ${
-                    result.final_score > 50 ? 'bg-red-500/5 border-red-500/20' : 'bg-green-500/5 border-green-500/20'
-                }`}>
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div className="flex items-center gap-4">
-                            {result.final_score > 50 
-                                ? <AlertTriangle className="w-12 h-12 text-red-500" /> 
-                                : <CheckCircle2 className="w-12 h-12 text-green-500" />
-                            }
+                <div className="p-8 rounded-[2rem] bg-[#0f0f0f] border border-white/10 glass-card relative overflow-hidden">
+                    <div className={`absolute top-0 right-0 w-64 h-64 blur-[80px] opacity-20 rounded-full ${result.final_score > 50 ? 'bg-red-500' : 'bg-green-500'}`} />
+                    
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+                        <div className="flex items-center gap-5">
+                            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${result.final_score > 50 ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500'}`}>
+                                {result.final_score > 50 ? <AlertTriangle className="w-8 h-8" /> : <CheckCircle2 className="w-8 h-8" />}
+                            </div>
                             <div>
-                                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{result.final_verdict}</h2>
-                                <p className="text-gray-500 dark:text-gray-400">AI Probability Score</p>
+                                <h2 className="text-3xl font-bold text-white">{result.final_verdict}</h2>
+                                <p className="text-gray-400">AI Probability Score</p>
                             </div>
                         </div>
-                        <div className="text-center">
-                            <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-500">
-                                {result.final_score}%
-                            </div>
+                        <div className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-500 text-punched">
+                            {result.final_score}%
                         </div>
+                    </div>
+
+                    <div className="mt-8 h-3 bg-white/5 rounded-full overflow-hidden">
+                       <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${result.final_score}%` }}
+                          transition={{ duration: 1.5, ease: "circOut" }}
+                          className={`h-full ${result.final_score > 50 ? 'bg-gradient-to-r from-orange-500 to-red-500' : 'bg-gradient-to-r from-green-500 to-emerald-500'}`}
+                       />
                     </div>
                 </div>
 
                 {/* Layer Details */}
                 <div className="grid gap-4">
                     {result.layers && Object.entries(result.layers).map(([key, layer], i) => (
-                        <div key={key} className="rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 overflow-hidden">
+                        <div key={key} className="rounded-2xl bg-[#0a0a0a] border border-white/5 overflow-hidden">
                             <button 
                                 onClick={() => toggleLayer(key)}
-                                className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                                className="w-full p-5 flex items-center justify-between hover:bg-white/5 transition-colors"
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center">
-                                        <Layers className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                                    <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
+                                        <Layers className="w-5 h-5 text-gray-400" />
                                     </div>
-                                    <span className="font-semibold text-gray-900 dark:text-white capitalize">
+                                    <span className="font-semibold text-white capitalize text-lg">
                                         {key.replace(/_/g, ' ')}
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                        layer.score > 50 ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' : 'bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400'
+                                        layer.score > 50 ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
                                     }`}>
                                         Score: {layer.score}
                                     </span>
-                                    {expandedLayers[key] ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                                    {expandedLayers[key] ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
                                 </div>
                             </button>
                             
@@ -155,22 +187,22 @@ const UploadZone = () => {
                                 {expandedLayers[key] && (
                                     <motion.div 
                                         initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }}
-                                        className="border-t border-gray-200 dark:border-white/10"
+                                        className="border-t border-white/5"
                                     >
-                                        <div className="p-4 grid md:grid-cols-2 gap-4 text-sm">
+                                        <div className="p-5 grid md:grid-cols-2 gap-6 text-sm">
                                             <div>
-                                                <h4 className="font-medium text-gray-900 dark:text-white mb-2">Technical Details</h4>
-                                                <div className="space-y-1 text-gray-600 dark:text-gray-400 font-mono text-xs">
+                                                <h4 className="font-medium text-white mb-3">Technical Details</h4>
+                                                <div className="space-y-2 text-gray-400 font-mono text-xs">
                                                     {layer.details && Object.entries(layer.details).map(([k, v]) => (
-                                                        <div key={k} className="flex justify-between">
+                                                        <div key={k} className="flex justify-between p-2 bg-white/5 rounded">
                                                             <span>{k}:</span>
-                                                            <span>{typeof v === 'number' ? v.toFixed(3) : v}</span>
+                                                            <span className="text-orange-400">{typeof v === 'number' ? v.toFixed(3) : v}</span>
                                                         </div>
                                                     ))}
                                                 </div>
                                             </div>
                                             {layer.ela_image && (
-                                                <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                                                <div className="aspect-video bg-black/50 rounded-lg overflow-hidden border border-white/10">
                                                     <img src={`data:image/jpeg;base64,${layer.ela_image}`} className="w-full h-full object-contain" />
                                                 </div>
                                             )}
