@@ -172,5 +172,3 @@ Built with ❤️ by the SatyaLens Team
 </p>
 
 ```
-
-```
