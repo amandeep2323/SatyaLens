@@ -22,7 +22,7 @@
 7.  **Provenance Check**: Reverse search and digital signature verification.
 
 ### UI/UX
-* **Modern "Sero" Aesthetic**: Dark mode-first, glassmorphism design.
+* **Modern Aesthetic**: Dark mode-first, glassmorphism design.
 * **Real-time Analysis**: WebSocket/Streaming updates for analysis progress.
 * **Detailed Reports**: Generates comprehensive PDF forensic reports.
 * **Secure Auth**: Integrated Google & Email authentication via Firebase.
