@@ -1,20 +1,35 @@
 import cv2
 import numpy as np
+import torch
 import math
+from PIL import Image
+
+# Try importing MTCNN (Deep Learning Face Detection)
+try:
+    from facenet_pytorch import MTCNN
+    AI_FACE_AVAILABLE = True
+except ImportError:
+    print("L4 Warning: facenet-pytorch not installed. Falling back to simple logic.")
+    AI_FACE_AVAILABLE = False
 
 class SemanticLayer:
     def __init__(self):
         self.layer_name = "L4_Semantic"
         self.weight = 0.20 
         
-        # Load Haar Cascades (Lightweight, built-in to OpenCV)
-        # We try to use the ones included in cv2.data
-        try:
-            self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-            self.eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
-        except:
-            print("L4 Warning: Haar Cascades not found. Face checks will be skipped.")
-            self.face_cascade = None
+        # Select Device
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        
+        # Initialize MTCNN (Deep Learning)
+        if AI_FACE_AVAILABLE:
+            try:
+                self.mtcnn = MTCNN(keep_all=True, device=self.device, thresholds=[0.6, 0.7, 0.7])
+                print(f"L4: MTCNN Face Detector Loaded on {self.device}")
+            except Exception as e:
+                print(f"L4 Error loading MTCNN: {e}")
+                self.mtcnn = None
+        else:
+            self.mtcnn = None
 
     def analyze(self, image_path):
         score = 0
@@ -22,29 +37,26 @@ class SemanticLayer:
         details = {}
         
         try:
-            img = cv2.imread(image_path)
-            if img is None: return {"layer_name": self.layer_name, "score": 0, "verdict": "Error", "flags": [], "details": {}}
-            
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            h, w = gray.shape
+            img = Image.open(image_path).convert('RGB')
+            # Convert to CV2 for geometry/lighting checks
+            cv_img = np.array(img)[:, :, ::-1].copy() 
+            gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
 
-            # --- CHECK 1: Face & Eye Physics (Geometry + Symmetry) ---
-            if self.face_cascade:
-                face_score, face_flags, face_data = self._analyze_face_physics(gray)
+            # --- CHECK 1: Deep Learning Face Physics ---
+            if self.mtcnn:
+                face_score, face_flags, face_data = self._analyze_face_physics_ai(img, cv_img)
                 score += face_score
                 flags.extend(face_flags)
                 details.update(face_data)
             
-            # --- CHECK 2: Shadow/Lighting Consistency ---
-            # Checks if light comes from a consistent direction
+            # --- CHECK 2: Lighting Consistency ---
             light_score, light_data = self._check_lighting_consistency(gray)
             score += light_score
             if light_score > 0:
                 flags.append("Inconsistent Lighting Direction (Shadows don't match)")
             details.update(light_data)
 
-            # --- CHECK 3: Perspective/Line Consistency ---
-            # Checks if straight lines are actually straight (AI often wobbles)
+            # --- CHECK 3: Perspective Consistency ---
             persp_score, persp_data = self._check_perspective_lines(gray)
             score += persp_score
             if persp_score > 0:
@@ -65,127 +77,112 @@ class SemanticLayer:
             "details": details
         }
 
-    def _analyze_face_physics(self, gray):
+    def _analyze_face_physics_ai(self, pil_img, cv_img):
+        """
+        Uses MTCNN to detect faces and precise landmarks (Eyes, Nose, Mouth).
+        Deep Learning is far more robust than Haar Cascades.
+        """
         score = 0
         flags = []
         data = {'faces_detected': 0}
         
-        faces = self.face_cascade.detectMultiScale(gray, 1.1, 5, minSize=(30, 30))
-        data['faces_detected'] = len(faces)
-        
-        if len(faces) == 0: return 0, [], data
-
-        # Analyze largest face
-        faces = sorted(faces, key=lambda x: x[2]*x[3], reverse=True)
-        x, y, w, h = faces[0]
-        roi_gray = gray[y:y+h, x:x+w]
-        
-        # 1. Geometry Check (Aspect Ratio)
-        # Human faces usually have a ratio ~1.3 to 1.6 (Height/Width) excluding hair
-        face_ratio = h / w
-        data['face_aspect_ratio'] = f"{face_ratio:.2f}"
-        
-        # AI often generates perfectly square faces (1.0) or too long (1.8)
-        if face_ratio < 1.05 or face_ratio > 1.8:
-            score += 20
-            flags.append(f"Abnormal Face Geometry (Ratio {face_ratio:.2f})")
-
-        # 2. Eye Symmetry Check
-        eyes = self.eye_cascade.detectMultiScale(roi_gray, 1.1, 5)
-        data['eyes_detected'] = len(eyes)
-        
-        if len(eyes) >= 2:
-            # Find the two largest eyes (likely the main pair)
-            eyes = sorted(eyes, key=lambda e: e[2]*e[3], reverse=True)[:2]
-            # Sort by X position (Left, Right)
-            eyes = sorted(eyes, key=lambda e: e[0])
+        try:
+            # Detect
+            boxes, probs, landmarks = self.mtcnn.detect(pil_img, landmarks=True)
             
-            e1, e2 = eyes[0], eyes[1]
-            eye1_img = roi_gray[e1[1]:e1[1]+e1[3], e1[0]:e1[0]+e1[2]]
-            eye2_img = roi_gray[e2[1]:e2[1]+e2[3], e2[0]:e2[0]+e2[2]]
-            
-            # Resize for comparison
-            target_size = (64, 64)
-            try:
-                e1_s = cv2.resize(eye1_img, target_size)
-                e2_s = cv2.resize(eye2_img, target_size)
-                e2_flipped = cv2.flip(e2_s, 1) # Mirror right eye to match left
+            if boxes is None: 
+                return 0, [], data
                 
-                # Correlation
-                res = cv2.matchTemplate(e1_s, e2_flipped, cv2.TM_CCOEFF_NORMED)
+            data['faces_detected'] = len(boxes)
+            
+            # Analyze largest face
+            # Box format: [x1, y1, x2, y2]
+            largest_idx = np.argmax([(b[2]-b[0]) * (b[3]-b[1]) for b in boxes])
+            box = boxes[largest_idx]
+            marks = landmarks[largest_idx] # 5 points: L_Eye, R_Eye, Nose, L_Mouth, R_Mouth
+            
+            x1, y1, x2, y2 = map(int, box)
+            w, h = x2-x1, y2-y1
+            
+            # 1. Geometry Check
+            face_ratio = h / (w + 1e-5)
+            data['face_aspect_ratio'] = f"{face_ratio:.2f}"
+            
+            # Relaxed thresholds for AI detection vs Real Camera
+            if face_ratio < 0.85 or face_ratio > 2.2:
+                score += 20
+                flags.append(f"Abnormal Face Geometry (Ratio {face_ratio:.2f})")
+
+            # 2. Precise Eye Symmetry (Using Neural Landmarks)
+            # MTCNN gives exact pupil centers.
+            left_eye = marks[0]
+            right_eye = marks[1]
+            
+            # Extract eye chips
+            eye_size = int(w * 0.18) # Eyes are roughly 18% of face width
+            
+            def get_eye_chip(center):
+                cx, cy = int(center[0]), int(center[1])
+                es = eye_size // 2
+                return cv_img[cy-es:cy+es, cx-es:cx+es]
+            
+            le_img = get_eye_chip(left_eye)
+            re_img = get_eye_chip(right_eye)
+            
+            if le_img.size > 0 and re_img.size > 0 and le_img.shape == re_img.shape:
+                # Mirror right eye
+                re_flipped = cv2.flip(re_img, 1)
+                
+                # Convert to grayscale for correlation
+                l_g = cv2.cvtColor(le_img, cv2.COLOR_BGR2GRAY)
+                r_g = cv2.cvtColor(re_flipped, cv2.COLOR_BGR2GRAY)
+                
+                res = cv2.matchTemplate(l_g, r_g, cv2.TM_CCOEFF_NORMED)
                 symmetry = res[0][0]
                 data['eye_symmetry_corr'] = f"{symmetry:.3f}"
                 
-                # Real eyes have HIGH symmetry in shape, but NOT perfect pixel match.
-                # Low (< 0.2) = GAN failure (Monstrous eyes)
-                # Super High (> 0.95) = Copy-Paste Edit
-                if symmetry < 0.25:
+                # AI Eyes are often:
+                # 1. Too different (different reflections) -> Low score
+                # 2. Identical (copy-paste) -> High score
+                
+                if symmetry < 0.20:
                     score += 50
                     flags.append("Asymmetric Eyes (Highlight/Shape mismatch)")
-                elif symmetry > 0.98:
+                elif symmetry > 0.95:
                     score += 40
-                    flags.append("Eyes are cloned (Pixel-perfect match)")
-                    
-            except:
-                pass
+                    flags.append("Eyes are pixel-perfect clones (Synthetic/Edit)")
+
+        except Exception as e:
+            print(f"L4 AI Scan Error: {e}")
+            pass
 
         return score, flags, data
 
     def _check_lighting_consistency(self, gray):
-        """
-        Uses Gradient Histograms to find light direction.
-        Real photos have 1 dominant peak (Sun/Lamp).
-        AI often has diffuse/conflicting shadows.
-        """
+        # (Same logic as before, just kept for completeness)
         try:
-            # Sobel Gradients
             gx = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
             gy = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
-            
             mag, angle = cv2.cartToPolar(gx, gy, angleInDegrees=True)
-            
-            # Only consider strong edges (shadows/structure)
             threshold = np.mean(mag) * 1.5
             mask = mag > threshold
-            
-            if np.sum(mask) < 100: return 0, {'lighting_variance': 'N/A'}
+            if np.sum(mask) < 100: return 0, {}
             
             valid_angles = angle[mask]
-            
-            # Histogram of angles (36 bins = 10 degrees each)
             hist, _ = np.histogram(valid_angles, bins=36, range=(0, 360))
-            
-            # Normalize
-            hist = hist / np.sum(hist)
-            
-            # Entropy: Low entropy = Consistent light (Peaks). High entropy = Chaos.
-            # However, simpler is "Peak Prominence".
-            # Sort bins
             sorted_bins = np.sort(hist)[::-1]
-            primary = sorted_bins[0]
-            secondary = sorted_bins[1]
+            ratio = sorted_bins[0] / (sorted_bins[1] + 1e-5)
             
-            ratio = primary / (secondary + 1e-5)
             data = {'light_direction_dominance': f"{ratio:.2f}"}
-            
-            # If the primary light direction is weak (ratio near 1.0), lighting is diffuse/flat/confused
-            # Strong light source usually gives ratio > 1.5
-            if ratio < 1.1:
-                return 30, data # Diffuse/Inconsistent
-            
+            if ratio < 1.1: return 30, data
             return 0, data
-        except:
-            return 0, {}
+        except: return 0, {}
 
     def _check_perspective_lines(self, gray):
-        """
-        Uses Hough Transform to detect lines.
-        Checks for "Wobble" - do parallel lines stay parallel?
-        """
+        # (Same logic as before)
         try:
             edges = cv2.Canny(gray, 50, 150, apertureSize=3)
             lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=100, minLineLength=100, maxLineGap=10)
-            
             if lines is None: return 0, {'detected_lines': 0}
             
             angles = []
@@ -194,27 +191,13 @@ class SemanticLayer:
                 angle = math.degrees(math.atan2(y2 - y1, x2 - x1))
                 if angle < 0: angle += 180
                 angles.append(angle)
-                
-            detected = len(angles)
             
-            # Calculate Variance of line angles in the dominant buckets
-            # (Buildings usually have lines at 90 and 0 degrees)
-            # AI often generates lines at random 87, 92, 4, -3 degrees.
-            
-            # Bin angles into 5-degree buckets
             hist, _ = np.histogram(angles, bins=36, range=(0, 180))
-            
-            # Count how many "Noise" lines exist (lines that aren't part of the main 2-3 clusters)
             threshold = max(hist) * 0.2
-            noise_lines = np.sum(hist[hist < threshold])
+            noise = np.sum(hist[hist < threshold])
+            ratio = noise / (len(angles) + 1e-5)
             
-            noise_ratio = noise_lines / (detected + 1e-5)
-            data = {'perspective_noise_ratio': f"{noise_ratio:.2f}", 'detected_lines': detected}
-            
-            # If > 60% of lines are "random" (not aligning to main axes), perspective is chaotic
-            if detected > 10 and noise_ratio > 0.6:
-                return 30, data
-                
+            data = {'perspective_noise_ratio': f"{ratio:.2f}", 'detected_lines': len(angles)}
+            if len(angles) > 10 and ratio > 0.6: return 30, data
             return 0, data
-        except:
-            return 0, {}
+        except: return 0, {}

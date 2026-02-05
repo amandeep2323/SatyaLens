@@ -2,6 +2,7 @@ import struct
 from PIL import Image
 import os
 import numpy as np
+import cv2 # Required for Ghost Detection
 
 class BitstreamAnalyzer:
     def __init__(self):
@@ -11,7 +12,7 @@ class BitstreamAnalyzer:
     def analyze(self, file_path):
         score = 0
         flags = []
-        details = {} # <--- NEW: Telemetry
+        details = {}
 
         try:
             # 1. Basic Telemetry
@@ -46,6 +47,15 @@ class BitstreamAnalyzer:
                 details['compression_anomalies'] = "High"
             else:
                 details['compression_anomalies'] = "Low"
+
+            # 4. JPEG Ghost Detection (New)
+            ghost_score = self._detect_jpeg_ghosts(file_path)
+            if ghost_score > 0:
+                score += ghost_score
+                flags.append("JPEG Ghost artifacts detected (Possible Insertion/Splicing)")
+                details['ghost_artifacts'] = "Detected"
+            else:
+                details['ghost_artifacts'] = "None"
 
         except Exception as e:
             print(f"L0 Error: {e}")
@@ -96,6 +106,38 @@ class BitstreamAnalyzer:
             new_size = buf.tell()
             ratio = new_size / original_size
             if ratio > 1.5: return 60 
+            return 0
+        except:
+            return 0
+
+    def _detect_jpeg_ghosts(self, path):
+        """
+        Detects 'JPEG Ghosts' - artifacts that appear when a JPEG is inserted 
+        into another JPEG with a different quality setting.
+        """
+        try:
+            img = cv2.imread(path)
+            if img is None: return 0
+            
+            # Simple Heuristic: Re-save at high quality (95). 
+            # Calculate the difference map (Residual).
+            # High variance in the residual map can indicate ghosting from previous lower quality saves.
+            
+            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 95]
+            _, encimg = cv2.imencode('.jpg', img, encode_param)
+            decimg = cv2.imdecode(encimg, 1)
+            
+            diff = cv2.absdiff(img, decimg)
+            gray_diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+            
+            # Normalize
+            _, max_val, _, _ = cv2.minMaxLoc(gray_diff)
+            
+            # If the max difference is very high (>30), it implies the original 
+            # was saved at a MUCH lower quality than 95, or edited.
+            if max_val > 30:
+                return 40 # Suspicious compression mismatch
+                
             return 0
         except:
             return 0

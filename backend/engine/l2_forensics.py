@@ -10,13 +10,13 @@ import base64
 class ForensicsLayer:
     def __init__(self):
         self.layer_name = "L2_Forensics"
-        self.weight = 0.30
+        self.weight = 0.20 
 
     def analyze(self, image_path):
         score = 0
         flags = []
         debug_ela = None
-        details = {} # <--- NEW
+        details = {} 
 
         try:
             pil_img = Image.open(image_path).convert('RGB')
@@ -34,7 +34,6 @@ class ForensicsLayer:
             details['base_noise_level'] = f"{noise_var_raw:.2f}"
 
             # --- CHECK 1: CFA (Bayer Pattern) ---
-            # UPDATED: Returns ratio value now
             cfa_score, cfa_ratio = self._check_cfa_variance(cv_img)
             details['cfa_ratio'] = f"{cfa_ratio:.5f}"
 
@@ -47,14 +46,12 @@ class ForensicsLayer:
                     flags.append(f"Missing Camera Sensor Trace (Low Confidence)")
 
             # --- CHECK 2: Noise Statistics ---
-            # UPDATED: Returns stats dict now
             stat_score, stat_flags, stat_details = self._analyze_noise_distribution(cv_img, is_noisy)
             score += stat_score
             flags.extend(stat_flags)
             details.update(stat_details)
 
             # --- CHECK 3: Block ELA ---
-            # UPDATED: Returns error rate now
             ela_score, ela_b64, ela_val = self._perform_block_ela(pil_img)
             score += ela_score
             debug_ela = ela_b64
@@ -62,6 +59,15 @@ class ForensicsLayer:
             
             if ela_score > 40:
                 flags.append(f"Inconsistent Compression Blocks (ELA Score: {ela_score}%)")
+
+            # --- CHECK 4: Min/Max Deviation (Sherloq Style) ---
+            # Detects anomalies in local dynamic range (Splicing/Blurring)
+            mm_score, mm_val = self._check_min_max_deviation(gray)
+            details['min_max_deviation'] = f"{mm_val:.4f}"
+            
+            if mm_score > 50:
+                score += mm_score
+                flags.append("Abnormal Local Dynamic Range (Min/Max Deviation)")
 
         except Exception as e:
             print(f"L2 Error: {e}")
@@ -78,11 +84,13 @@ class ForensicsLayer:
             "details": details
         }
 
+
     def _check_cfa_variance(self, img):
         try:
             if img.shape[2] != 3: return 0, 0
             green = img[:, :, 1].astype(np.float32)
             
+            # Standard CFA Variance Logic
             kernel = np.ones((3, 3)) / 9.0
             local_mean = convolve2d(green, kernel, mode='same', boundary='symm')
             local_var = convolve2d((green - local_mean)**2, kernel, mode='same', boundary='symm')
@@ -90,18 +98,20 @@ class ForensicsLayer:
             mask_s = np.zeros(green.shape, dtype=bool)
             mask_s[0::2, 0::2] = True 
             mask_s[1::2, 1::2] = True
-            
             var_s = np.mean(local_var[mask_s])
             var_i = np.mean(local_var[~mask_s])
             
             if var_i == 0: return 0, 0
-            
             ratio = var_s / var_i
             diff = abs(ratio - 1.0)
             
             score = 0
-            if diff < 0.005: score = 95
-            if diff < 0.01: score = 50
+            # --- FIX IS HERE ---
+            # Use 'elif' to prevent overwriting the higher score
+            if diff < 0.005: 
+                score = 95
+            elif diff < 0.01: 
+                score = 50
                 
             return score, ratio
         except:
@@ -115,7 +125,6 @@ class ForensicsLayer:
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.float32)
             smoothed = uniform_filter(gray, size=3)
             noise = gray - smoothed
-            
             noise_flat = noise.flatten()
             noise_kurt = kurtosis(noise_flat)
             noise_var = np.var(noise_flat)
@@ -131,7 +140,6 @@ class ForensicsLayer:
                 if abs(noise_kurt) > 2.5:
                     score += 40
                     flags.append(f"Unnatural Noise Pattern (Grain is non-Gaussian)")
-            
             return score, flags, stats
         except:
             return 0, [], {}
@@ -143,7 +151,6 @@ class ForensicsLayer:
             original.save(buffer, 'JPEG', quality=90)
             buffer.seek(0)
             resaved = Image.open(buffer)
-            
             diff = ImageChops.difference(original, resaved)
             
             extrema = diff.getextrema()
@@ -164,7 +171,6 @@ class ForensicsLayer:
                         block_vars.append(np.mean(block))
             
             if not block_vars: return 0, None, 0
-            
             vars_np = np.array(block_vars)
             threshold = np.percentile(vars_np, 98)
             mean_error = np.mean(vars_np)
@@ -176,7 +182,45 @@ class ForensicsLayer:
             buffered_out = io.BytesIO()
             visual_diff.save(buffered_out, format="JPEG")
             img_str = base64.b64encode(buffered_out.getvalue()).decode("utf-8")
-            
             return score, img_str, mean_error
         except:
             return 0, None, 0
+
+    def _check_min_max_deviation(self, gray):
+        """
+        Sherloq-inspired Min/Max Deviation.
+        Calculates local dynamic range (Max - Min) in 5x5 blocks.
+        High deviation in range suggests manipulation (splicing/blurring).
+        """
+        try:
+            kernel = np.ones((5,5), np.uint8)
+            # Morphological filters find local Min and Max
+            local_min = cv2.erode(gray, kernel)
+            local_max = cv2.dilate(gray, kernel)
+            
+            # Local Dynamic Range
+            local_range = cv2.absdiff(local_max, local_min).astype(np.float32)
+            
+            # Global mean of the range
+            avg_range = np.mean(local_range)
+            
+            # Calculate Deviation: How far is the local range from the global average?
+            # We look for "Quiet" spots in "Noisy" images (blurring)
+            # Or "Loud" spots in "Quiet" images (splicing)
+            deviation_map = np.abs(local_range - avg_range)
+            
+            # Score: Ratio of high deviation pixels
+            threshold = avg_range * 2.0 
+            outliers = np.sum(deviation_map > threshold)
+            total_pixels = gray.shape[0] * gray.shape[1]
+            
+            ratio = outliers / total_pixels
+            
+            # If > 10% of image has abnormal dynamic range, it's likely edited
+            score = 0
+            if ratio > 0.10:
+                score = min(100, ratio * 400)
+                
+            return int(score), ratio
+        except:
+            return 0, 0

@@ -1,0 +1,598 @@
+Inconclusive / Mixed Signals
+AI Probability Score
+
+46.2%
+
+l0 bitstream
+Score: 0
+Technical Details
+file_size:
+2012.74 KB
+resolution:
+3264x2448
+format:
+JPEG
+quantization_check:
+Pass
+compression_anomalies:
+Low
+ghost_artifacts:
+None
+
+l1 metadata
+Score: 0
+Technical Details
+format:
+JPEG
+mode:
+RGB
+size:
+3264x2448
+Camera Model:
+iPhone 6
+Software Used:
+11.2
+Capture Time:
+2018:08:06 20:22:21
+Lens Model:
+iPhone 6 back camera 4.15mm f/2.2
+MakerNote:
+Binary Data (Hidden)
+Metadata_jfif:
+257
+Metadata_jfif_version:
+(1, 1)
+Metadata_jfif_unit:
+0
+Metadata_jfif_density:
+(72, 72)
+Metadata_dpi:
+(72.0, 72.0)
+Metadata_photoshop:
+{1028: b'', 1061: b'\xd4\x1d\x8c\xd9\x8f\x00\xb2\x04\xe9\x80\t\x98\xec\xf8B~'}
+
+l2 forensics
+Score: 40
+Technical Details
+high_res_check:
+True
+base_noise_level:
+8996.10
+cfa_ratio:
+0.98574
+noise_var:
+12.4358
+noise_kurtosis:
+34.0215
+ela_error_rate:
+0.94
+min_max_deviation:
+0.0723
+
+
+l3 frequency
+Score: 0
+Technical Details
+gan_peaks:
+0.000
+spectral_slope:
+-2.869
+spectral_flatness:
+0.0003
+
+l4 semantic
+Score: 50
+Technical Details
+faces_detected:
+22.000
+face_aspect_ratio:
+1.00
+eyes_detected:
+1.000
+light_direction_dominance:
+1.02
+perspective_noise_ratio:
+0.21
+detected_lines:
+246.000
+
+l5 ai model
+Score: 94
+Technical Details
+ai_probability:
+0.9436
+scan_method:
+5-Patch Analysis
+
+
+---------------------------------------
+
+Suspicious / Edited
+AI Probability Score
+
+57%
+
+l0 bitstream
+Score: 0
+Technical Details
+file_size:
+3295.23 KB
+resolution:
+4000x3000
+format:
+JPEG
+quantization_check:
+Pass
+compression_anomalies:
+Low
+ghost_artifacts:
+None
+
+l1 metadata
+Score: 0
+Technical Details
+format:
+JPEG
+mode:
+RGB
+size:
+4000x3000
+GPS Location:
+28.468010, 77.068080
+Camera Model:
+Redmi Note 5 Pro
+Software Used:
+whyred-user 9 PKQ1.180904.001 V10.3.2.0.PEIMIXM release-keys
+Capture Time:
+2019:11:16 17:48:04
+Metadata_dpi:
+(72.0, 72.0)
+
+l2 forensics
+Score: 100
+Technical Details
+high_res_check:
+True
+base_noise_level:
+5401.59
+cfa_ratio:
+1.00025
+noise_var:
+2.7634
+noise_kurtosis:
+23.7940
+ela_error_rate:
+0.93
+min_max_deviation:
+0.0898
+
+
+l3 frequency
+Score: 0
+Technical Details
+gan_peaks:
+2.000
+spectral_slope:
+-2.968
+spectral_flatness:
+0.0002
+
+l4 semantic
+Score: 50
+Technical Details
+faces_detected:
+14.000
+face_aspect_ratio:
+1.00
+eyes_detected:
+0.000
+light_direction_dominance:
+1.09
+perspective_noise_ratio:
+0.22
+detected_lines:
+111.000
+
+l5 ai model
+Score: 90
+Technical Details
+ai_probability:
+0.9027
+scan_method:
+5-Patch Analysis
+
+
+
+
+
+
+------------------------
+
+Inconclusive / Mixed Signals
+AI Probability Score
+
+48.8%
+
+l0 bitstream
+Score: 0
+Technical Details
+file_size:
+7923.46 KB
+resolution:
+4000x3000
+format:
+JPEG
+quantization_check:
+Pass
+compression_anomalies:
+Low
+ghost_artifacts:
+None
+
+l1 metadata
+Score: 0
+Technical Details
+format:
+JPEG
+mode:
+RGB
+size:
+4000x3000
+GPS Location:
+0.000000, 0.000000
+Camera Model:
+--
+Software Used:
+ginkgo-user 10 QKQ1.200114.002 V12.0.2.0.QCOINXM release-keys
+Capture Time:
+2021:11:15 22:50:56
+Metadata_dpi:
+(72.0, 72.0)
+
+l2 forensics
+Score: 80
+Technical Details
+high_res_check:
+True
+base_noise_level:
+14866.88
+cfa_ratio:
+0.99960
+noise_var:
+52.1619
+noise_kurtosis:
+1.9179
+ela_error_rate:
+2.71
+min_max_deviation:
+0.0270
+
+
+l3 frequency
+Score: 0
+Technical Details
+gan_peaks:
+0.000
+spectral_slope:
+-2.817
+spectral_flatness:
+0.0025
+
+l4 semantic
+Score: 50
+Technical Details
+faces_detected:
+16.000
+face_aspect_ratio:
+1.00
+eyes_detected:
+2.000
+eye_symmetry_corr:
+0.482
+light_direction_dominance:
+1.05
+perspective_noise_ratio:
+0.34
+detected_lines:
+5307.000
+
+l5 ai model
+Score: 76
+Technical Details
+ai_probability:
+0.7630
+scan_method:
+5-Patch Analysis
+
+
+
+
+--------------------------
+
+
+Suspicious / Edited
+AI Probability Score
+
+58.8%
+
+l0 bitstream
+Score: 0
+Technical Details
+file_size:
+3254.74 KB
+resolution:
+4032x3024
+format:
+JPEG
+quantization_check:
+Pass
+compression_anomalies:
+Low
+ghost_artifacts:
+None
+
+l1 metadata
+Score: 0
+Technical Details
+format:
+JPEG
+mode:
+RGB
+size:
+4032x3024
+Camera Model:
+SM-G781B
+Software Used:
+G781BXXU4FVI1
+Capture Time:
+2022:10:12 12:47:35
+Metadata_dpi:
+(72.0, 72.0)
+
+l2 forensics
+Score: 100
+Technical Details
+high_res_check:
+True
+base_noise_level:
+11689.21
+cfa_ratio:
+1.00070
+noise_var:
+13.0705
+noise_kurtosis:
+15.2451
+ela_error_rate:
+1.14
+min_max_deviation:
+0.0653
+
+
+l3 frequency
+Score: 0
+Technical Details
+gan_peaks:
+0.000
+spectral_slope:
+-2.811
+spectral_flatness:
+0.0003
+
+l4 semantic
+Score: 50
+Technical Details
+faces_detected:
+37.000
+face_aspect_ratio:
+1.00
+eyes_detected:
+2.000
+eye_symmetry_corr:
+0.576
+light_direction_dominance:
+1.07
+perspective_noise_ratio:
+0.33
+detected_lines:
+751.000
+
+l5 ai model
+Score: 96
+Technical Details
+ai_probability:
+0.9699
+scan_method:
+5-Patch Analysis
+
+
+
+------------------------
+
+
+
+Suspicious / Edited
+AI Probability Score
+
+52.5%
+
+l0 bitstream
+Score: 0
+Technical Details
+file_size:
+4088.82 KB
+resolution:
+2592x4608
+format:
+JPEG
+quantization_check:
+Pass
+compression_anomalies:
+Low
+ghost_artifacts:
+None
+
+l1 metadata
+Score: 0
+Technical Details
+format:
+JPEG
+mode:
+RGB
+size:
+2592x4608
+Camera Model:
+2109119DI
+Capture Time:
+2025:06:23 11:22:55
+Metadata_dpi:
+(72.0, 72.0)
+
+l2 forensics
+Score: 100
+Technical Details
+high_res_check:
+True
+base_noise_level:
+10352.05
+cfa_ratio:
+0.99978
+noise_var:
+45.9392
+noise_kurtosis:
+14.4347
+ela_error_rate:
+1.36
+min_max_deviation:
+0.1144
+
+
+l3 frequency
+Score: 0
+Technical Details
+gan_peaks:
+0.000
+spectral_slope:
+-1.887
+spectral_flatness:
+0.0007
+
+l4 semantic
+Score: 50
+Technical Details
+faces_detected:
+8.000
+face_aspect_ratio:
+1.00
+eyes_detected:
+2.000
+eye_symmetry_corr:
+0.582
+light_direction_dominance:
+1.00
+perspective_noise_ratio:
+0.26
+detected_lines:
+3821.000
+
+l5 ai model
+Score: 75
+Technical Details
+ai_probability:
+0.7553
+scan_method:
+5-Patch Analysis
+
+
+--------------------------
+
+Inconclusive / Mixed Signals
+AI Probability Score
+
+44.7%
+
+l0 bitstream
+Score: 0
+Technical Details
+file_size:
+5204.08 KB
+resolution:
+3472x4640
+format:
+JPEG
+quantization_check:
+Pass
+compression_anomalies:
+Low
+ghost_artifacts:
+None
+
+l1 metadata
+Score: 0
+Technical Details
+format:
+JPEG
+mode:
+RGB
+size:
+3472x4640
+Camera Model:
+2109119DI
+Capture Time:
+2024:09:24 15:48:43
+Metadata_dpi:
+(72.0, 72.0)
+
+l2 forensics
+Score: 40
+Technical Details
+high_res_check:
+True
+base_noise_level:
+13396.42
+cfa_ratio:
+1.01195
+noise_var:
+7.3062
+noise_kurtosis:
+3.7876
+ela_error_rate:
+1.63
+min_max_deviation:
+0.0232
+
+
+l3 frequency
+Score: 0
+Technical Details
+gan_peaks:
+0.000
+spectral_slope:
+-3.200
+spectral_flatness:
+0.0003
+
+l4 semantic
+Score: 50
+Technical Details
+faces_detected:
+3.000
+face_aspect_ratio:
+1.00
+eyes_detected:
+0.000
+light_direction_dominance:
+1.06
+perspective_noise_ratio:
+0.25
+detected_lines:
+130.000
+
+l5 ai model
+Score: 89
+Technical Details
+ai_probability:
+0.8949
+scan_method:
+5-Patch Analysis
+
+
