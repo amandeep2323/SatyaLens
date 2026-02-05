@@ -23,33 +23,59 @@ class ForensicsLayer:
             cv_img = np.array(pil_img)[:, :, ::-1].copy() # BGR
             h, w, _ = cv_img.shape
             
-            # --- CONTEXT DETECTION ---
-            pixel_count = h * w
-            is_high_res = pixel_count > (800 * 800)
-            details['high_res_check'] = str(is_high_res)
+            # --- 1. UNIVERSAL IMAGE PROFILING ---
+            # Instead of guessing the device, we measure the "Processing Signature"
             
-            gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
-            noise_var_raw = np.var(gray - uniform_filter(gray, size=3))
-            is_noisy = noise_var_raw > 10.0
-            details['base_noise_level'] = f"{noise_var_raw:.2f}"
+            gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY).astype(np.float32)
+            
+            # Measure Noise Shape (Kurtosis)
+            # High Kurtosis (>5) = Heavily Denoised/Sharpened (Mobile/Edit)
+            # Low Kurtosis (~0) = Natural Sensor Noise (DSLR/Old Phone)
+            smoothed = uniform_filter(gray, size=3)
+            noise = gray - smoothed
+            noise_flat = noise.flatten()
+            kurt_val = kurtosis(noise_flat)
+            
+            # Measure Global Smoothness (Variance)
+            noise_var = np.var(noise_flat)
+
+            # --- PROFILE DECISION ---
+            # If kurtosis is high, the image was processed by software (ISP or Photoshop).
+            # Therefore, we EXPECT missing CFA traces. We should NOT flag them.
+            is_heavily_processed = kurt_val > 5.0 or (noise_var < 5.0 and w > 2000)
+            
+            details['processing_signature'] = "Heavy (Mobile/Edit)" if is_heavily_processed else "Natural (Raw/DSLR)"
+            details['noise_kurtosis'] = f"{kurt_val:.2f}"
 
             # --- CHECK 1: CFA (Bayer Pattern) ---
+            # ADAPTIVE LOGIC: Only strictly check CFA if the image claims to be Natural.
             cfa_score, cfa_ratio = self._check_cfa_variance(cv_img)
             details['cfa_ratio'] = f"{cfa_ratio:.5f}"
 
-            if cfa_score > 50:
-                if is_high_res:
-                    score += 80 
-                    flags.append(f"Missing Camera Sensor Trace (High Confidence - {cfa_score}%)")
-                elif not is_noisy:
-                    score += 40
-                    flags.append(f"Missing Camera Sensor Trace (Low Confidence)")
+            if cfa_score > 0:
+                if is_heavily_processed:
+                    # Universal Rule: If processed, missing CFA is NORMAL.
+                    # We dampen the score significantly (Cap at 10-20)
+                    score += 10 
+                    # Don't even add a flag, it's too common.
+                    details['cfa_status'] = "Missing (Expected due to processing)"
+                else:
+                    # If image looks Natural/Grainy but lacks CFA -> Suspicious
+                    score += cfa_score
+                    flags.append(f"Missing Camera Sensor Trace (Suspicious for Raw-like image)")
 
-            # --- CHECK 2: Noise Statistics ---
-            stat_score, stat_flags, stat_details = self._analyze_noise_distribution(cv_img, is_noisy)
-            score += stat_score
-            flags.extend(stat_flags)
-            details.update(stat_details)
+            # --- CHECK 2: Noise Analysis ---
+            # If processed, we ignore high kurtosis (it's the processing).
+            # We only flag if it's "Plastic Smooth" (Variance ~0).
+            if noise_var < 1.0:
+                score += 40
+                flags.append("Unnaturally Smooth (Plastic Texture)")
+            elif not is_heavily_processed and abs(kurt_val) > 2.0:
+                # If it looks Raw but has weird noise -> Fake
+                score += 30
+                flags.append("Inconsistent Noise Statistics")
+
+            details['noise_variance'] = f"{noise_var:.2f}"
 
             # --- CHECK 3: Block ELA ---
             ela_score, ela_b64, ela_val = self._perform_block_ela(pil_img)
@@ -58,16 +84,15 @@ class ForensicsLayer:
             details['ela_error_rate'] = f"{ela_val:.2f}"
             
             if ela_score > 40:
-                flags.append(f"Inconsistent Compression Blocks (ELA Score: {ela_score}%)")
+                flags.append(f"Inconsistent Compression Blocks (ELA)")
 
-            # --- CHECK 4: Min/Max Deviation (Sherloq Style) ---
-            # Detects anomalies in local dynamic range (Splicing/Blurring)
+            # --- CHECK 4: Min/Max Deviation ---
             mm_score, mm_val = self._check_min_max_deviation(gray)
             details['min_max_deviation'] = f"{mm_val:.4f}"
             
             if mm_score > 50:
                 score += mm_score
-                flags.append("Abnormal Local Dynamic Range (Min/Max Deviation)")
+                flags.append("Abnormal Local Dynamic Range")
 
         except Exception as e:
             print(f"L2 Error: {e}")
@@ -84,13 +109,10 @@ class ForensicsLayer:
             "details": details
         }
 
-
     def _check_cfa_variance(self, img):
         try:
             if img.shape[2] != 3: return 0, 0
             green = img[:, :, 1].astype(np.float32)
-            
-            # Standard CFA Variance Logic
             kernel = np.ones((3, 3)) / 9.0
             local_mean = convolve2d(green, kernel, mode='same', boundary='symm')
             local_var = convolve2d((green - local_mean)**2, kernel, mode='same', boundary='symm')
@@ -106,45 +128,15 @@ class ForensicsLayer:
             diff = abs(ratio - 1.0)
             
             score = 0
-            # --- FIX IS HERE ---
-            # Use 'elif' to prevent overwriting the higher score
-            if diff < 0.005: 
-                score = 95
-            elif diff < 0.01: 
-                score = 50
+            if diff < 0.005: score = 95
+            elif diff < 0.01: score = 50
                 
             return score, ratio
         except:
             return 0, 0
 
-    def _analyze_noise_distribution(self, img, is_noisy):
-        score = 0
-        flags = []
-        stats = {}
-        try:
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.float32)
-            smoothed = uniform_filter(gray, size=3)
-            noise = gray - smoothed
-            noise_flat = noise.flatten()
-            noise_kurt = kurtosis(noise_flat)
-            noise_var = np.var(noise_flat)
-            
-            stats['noise_var'] = f"{noise_var:.4f}"
-            stats['noise_kurtosis'] = f"{noise_kurt:.4f}"
-            
-            if noise_var < 2.0:
-                if abs(noise_kurt) > 1.0:
-                    score += 50
-                    flags.append(f"Synthetic Texture (High Kurtosis {noise_kurt:.2f})")
-            else:
-                if abs(noise_kurt) > 2.5:
-                    score += 40
-                    flags.append(f"Unnatural Noise Pattern (Grain is non-Gaussian)")
-            return score, flags, stats
-        except:
-            return 0, [], {}
-
     def _perform_block_ela(self, pil_img):
+        # (Standard ELA logic preserved)
         try:
             original = pil_img.convert('RGB')
             buffer = io.BytesIO()
@@ -176,7 +168,9 @@ class ForensicsLayer:
             mean_error = np.mean(vars_np)
             
             score = 0
-            if mean_error > 0.5 and threshold > (mean_error * 4.0):
+            # Universal Threshold: 
+            # Only flag if errors are massive (4x average) AND average is high enough to matter
+            if mean_error > 2.0 and threshold > (mean_error * 4.0):
                 score = 50
                 
             buffered_out = io.BytesIO()
@@ -187,40 +181,21 @@ class ForensicsLayer:
             return 0, None, 0
 
     def _check_min_max_deviation(self, gray):
-        """
-        Sherloq-inspired Min/Max Deviation.
-        Calculates local dynamic range (Max - Min) in 5x5 blocks.
-        High deviation in range suggests manipulation (splicing/blurring).
-        """
+        # (Standard Sherloq logic preserved)
         try:
             kernel = np.ones((5,5), np.uint8)
-            # Morphological filters find local Min and Max
             local_min = cv2.erode(gray, kernel)
             local_max = cv2.dilate(gray, kernel)
-            
-            # Local Dynamic Range
             local_range = cv2.absdiff(local_max, local_min).astype(np.float32)
-            
-            # Global mean of the range
             avg_range = np.mean(local_range)
-            
-            # Calculate Deviation: How far is the local range from the global average?
-            # We look for "Quiet" spots in "Noisy" images (blurring)
-            # Or "Loud" spots in "Quiet" images (splicing)
             deviation_map = np.abs(local_range - avg_range)
-            
-            # Score: Ratio of high deviation pixels
             threshold = avg_range * 2.0 
             outliers = np.sum(deviation_map > threshold)
             total_pixels = gray.shape[0] * gray.shape[1]
-            
             ratio = outliers / total_pixels
-            
-            # If > 10% of image has abnormal dynamic range, it's likely edited
             score = 0
-            if ratio > 0.10:
+            if ratio > 0.15: # Raised slightly for universal stability
                 score = min(100, ratio * 400)
-                
             return int(score), ratio
         except:
             return 0, 0
