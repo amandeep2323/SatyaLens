@@ -2,3 +2,4 @@ node_modules
 venv/
 SatyaLens_2.0.zip
 /frontend/src/firebase.js
+__pycache__
